@@ -24,20 +24,22 @@ acstab <- rbind(acstab, get_acs(geography = "place", variables = "B00001_001", e
 acstab <- rbind(acstab, get_acs(geography = "tract", state = state_codes, variables = "B00001_001", endyear = 2010, output = "wide"))
 
 #get chunks of 500 to speed things up
+acs500 <- function(geotype){
 system.time({
   x = 1
   for (i in 1:length(tablevector)){
     if ((i %% 500) == 0){
       tv500 = tablevector[x:i]
       if (x == 1){
-        acstab <- get_acs(geography = "us", variables = tv500, endyear = 2010, output = "wide")
+        acstab <- get_acs(geography = geotype, variables = tv500, endyear = 2010, output = "wide")
       }
       else{
-        acstab <- cbind(acstab, get_acs(geography = "us", variables = tv500, endyear = 2010, output = "wide"))
+        acstab <- cbind(acstab, get_acs(geography = geotype, variables = tv500, endyear = 2010, output = "wide"))
       }
       print(paste(x,i))
       x = x + 500
 }}})
+}  
 
 acstab <- acstab[, !duplicated(colnames(acstab))] #get rid of duplicate columns
 
