@@ -23,6 +23,24 @@ acstab <- rbind(acstab, get_acs(geography = "county", variables = "B00001_001", 
 acstab <- rbind(acstab, get_acs(geography = "place", variables = "B00001_001", endyear = 2010, output = "wide"))
 acstab <- rbind(acstab, get_acs(geography = "tract", state = state_codes, variables = "B00001_001", endyear = 2010, output = "wide"))
 
+#get chunks of 500 to speed things up
+system.time({
+  x = 1
+  for (i in 1:length(tablevector)){
+    if ((i %% 500) == 0){
+      tv500 = tablevector[x:i]
+      if (x == 1){
+        acstab <- get_acs(geography = "us", variables = tv500, endyear = 2010, output = "wide")
+      }
+      else{
+        acstab <- cbind(acstab, get_acs(geography = "us", variables = tv500, endyear = 2010, output = "wide"))
+      }
+      print(paste(x,i))
+      x = x + 500
+}}})
+
+acstab <- acstab[, !duplicated(colnames(acstab))] #get rid of duplicate columns
+
 # bgs <- map_df(state_codes, function(state_code) {
 #   state <- filter(ctys, STATEFP == state_code)
 #   county_codes <- state$COUNTYFP
