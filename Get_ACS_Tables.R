@@ -3,6 +3,8 @@ library(tidyverse)
 library(tigris)
 library(stringr)
 library(sf)
+library(lazyeval)
+library(RPostgreSQL)
 
 geos <- c("state","county","tract","bg","place")
 state_codes <- unique(fips_codes$state_code)[1:51]
@@ -61,4 +63,67 @@ for (tv in tablevector){
   tryCatch({  
     get_acs(geography = "us", variables = tv, endyear = 2010, output = "wide")
   }, error=function(e){cat("ERROR :",conditionMessage(e),tv,"\n")})
+}
+
+#Table Manipulation
+
+states <- read.csv(file="states.csv", header=TRUE, sep=",", colClasses = "character")
+
+#Split data and margin of error
+statedata <- select_(states, lazyeval::interp(~ends_with(x), x = "E"))
+statedata$NAM <- NULL
+statemoe <- select_(states, lazyeval::interp(~ends_with(x), x = "M"))
+
+#Rename fields
+names(statedata) <- substr(names(statedata),1,nchar(names(statedata))-1)
+names(statedata) <- sub("_","",names(statedata))
+names(statemoe) <- substr(names(statemoe),1,nchar(names(statemoe))-1)
+names(statemoe) <- sub("_","_MOE",names(statemoe))
+
+#Add name and geoid columns
+statedata <-cbind(GEONUM=as.character(states$GEOID),statedata)
+statedata <-cbind(NAME=states$NAME,statedata)
+statemoe <-cbind(GEONUM=as.character(states$GEOID),statemoe)
+statemoe <-cbind(NAME=states$NAME,statemoe)
+
+#Change geoid to geonum
+statedata$GEONUM <- sub("^","1",statedata$GEONUM)
+statemoe$GEONUM <- sub("^","1",statemoe$GEONUM)
+
+#Brute force the US Geonum
+statedata[1,2] <- "30"
+statemoe[1,2] <- "30"
+
+#make all columns numeric
+statedata <- sapply(statedata, as.numeric) #drop Name and Nam in production
+statemoe <- sapply(statemoe, as.numeric)
+
+#Connect to Postgresql
+pg = dbDriver("PostgreSQL")
+con = dbConnect(pg, user="postgres", password="eA_987_Tr", host="104.197.26.248", port=5433, dbname="acs0610")
+
+testcolumns <- colnames(statedata)[1:100] #shortened array to test writing loop
+
+#do the loop and write to database
+tabname <- ""
+collist <- c()
+for (column in testcolumns){
+  if (column == "NAME" | column == "GEONUM" | column == "NAM"){}
+  else{
+    colstart <- substr(column, start = 1, stop = nchar(column)-3)
+    #print(colstart)
+    if (colstart != tabname){
+      if (is.null(collist) == FALSE){
+        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist)))
+        names(dbtable) <- tolower(names(dbtable))
+        dbWriteTable(con,c('data',tolower(tabname)),dbtable,row.names=FALSE)
+      }
+      #print(collist)
+      collist <- c(column)
+      tabname <- colstart
+    }
+    else {
+      collist <- c(collist,column)
+    }
+  }
 }
