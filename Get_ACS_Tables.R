@@ -19,18 +19,17 @@ tablevector <- sub("E$","",tablevector) #remove last Es
 tablevector <- sub("M$","",tablevector) #remove last Ms
 tablevector <- unique(tablevector) #ditch the duplicates
 
-acstab <- get_acs(geography = "us", variables = c("B01001_001","B01001_002"), endyear = 2010, output = "wide")
-acstab <- rbind(acstab, get_acs(geography = "state", variables = "B00001_001", endyear = 2010, output = "wide"))
-acstab <- rbind(acstab, get_acs(geography = "county", variables = "B00001_001", endyear = 2010, output = "wide"))
-acstab <- rbind(acstab, get_acs(geography = "place", variables = "B00001_001", endyear = 2010, output = "wide"))
-acstab <- rbind(acstab, get_acs(geography = "tract", state = state_codes, variables = "B00001_001", endyear = 2010, output = "wide"))
+# acstab <- get_acs(geography = "us", variables = c("B01001_001","B01001_002"), endyear = 2010, output = "wide")
+# acstab <- rbind(acstab, get_acs(geography = "state", variables = "B00001_001", endyear = 2010, output = "wide"))
+# acstab <- rbind(acstab, get_acs(geography = "county", variables = "B00001_001", endyear = 2010, output = "wide"))
+# acstab <- rbind(acstab, get_acs(geography = "place", variables = "B00001_001", endyear = 2010, output = "wide"))
+# acstab <- rbind(acstab, get_acs(geography = "tract", state = state_codes, variables = "B00001_001", endyear = 2010, output = "wide"))
 
 #get chunks of 500 to speed things up
 acs500 <- function(geotype){
-system.time({
   x = 1
   for (i in 1:length(tablevector)){
-    if ((i %% 500) == 0){
+    if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
       if (x == 1){
         acstab <- get_acs(geography = geotype, variables = tv500, endyear = 2010, output = "wide")
@@ -40,18 +39,63 @@ system.time({
       }
       print(paste(x,i))
       x = x + 500
-}}})
-}  
+    }
+  }
+  acstab <- acstab[, !duplicated(colnames(acstab))]
+  return(acstab)
+}
 
-acstab <- acstab[, !duplicated(colnames(acstab))] #get rid of duplicate columns
+acs500tract <- function(){
+  x = 1
+  for (i in 1:length(tablevector)){
+    if ((i %% 500) == 0 | i == length(tablevector)){
+      tv500 = tablevector[x:i]
+      if (x == 1){
+        acstab <- get_acs(geography = "tract", state = state_codes, variables = tv500, endyear = 2010, output = "wide")
+      }
+      else{
+        acstab <- cbind(acstab, get_acs(geography = "tract", state = state_codes, variables = tv500, endyear = 2010, output = "wide"))
+      }
+      print(paste(x,i))
+      x = x + 500
+    }
+  }
+  acstab <- acstab[, !duplicated(colnames(acstab))]
+  return(acstab)
+}
 
-# bgs <- map_df(state_codes, function(state_code) {
-#   state <- filter(ctys, STATEFP == state_code)
-#   county_codes <- state$COUNTYFP
-#   rbind(acstab, get_acs(geography = "block group", variables = "B00001_001",
-#           state = state_code, county = county_codes))
-# })
+acs500bg <- function(geotype){
+  for (state in state_codes){
+    x = 1
+    for (i in 1:length(tablevector)){
+      if ((i %% 500) == 0 | i == length(tablevector)){
+        tv500 = tablevector[x:i]
+        if (x == 1){
+          acstab <- get_acs(geography = geotype, state = state, variables = tv500, endyear = 2010, output = "wide")
+        }
+        else{
+          acstab <- cbind(acstab, get_acs(geography = geotype, state = state, variables = tv500, endyear = 2010, output = "wide"))
+        }
+        print(paste(x,i))
+        x = x + 500
+      }
+    }
+    acstab <- acstab[, !duplicated(colnames(acstab))]
+    if (state == "AL"){
+      acstabbg <- acstab
+    }
+    else{
+      acstabbg <- cbind(acstabbg,acstab)
+    }
+  }
+  return(acstabbg)
+}
 
+acstabus <- acs500(geotype = "us")
+acstabstate <- acs500(geotype = "state")
+acstabcounty <- acs500(geotype = "county")
+acstabplace <- acs500(geotype = "place")
+acstabtract <- acs500tract(geotype = "tract")
 
 for (state in state_codes){
   print(state)
