@@ -45,16 +45,16 @@ acs500 <- function(geotype){
   return(acstab)
 }
 
-acs500tract <- function(){
+acs500tract <- function(tract_state){
   x = 1
   for (i in 1:length(tablevector)){
     if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
       if (x == 1){
-        acstab <- get_acs(geography = "tract", state = state_codes, variables = tv500, endyear = 2010, output = "wide")
+        acstab <- get_acs(geography = "tract", state = tract_state, variables = tv500, endyear = 2010, output = "wide")
       }
       else{
-        acstab <- cbind(acstab, get_acs(geography = "tract", state = state_codes, variables = tv500, endyear = 2010, output = "wide"))
+        acstab <- cbind(acstab, get_acs(geography = "tract", state = tract_state, variables = tv500, endyear = 2010, output = "wide"))
       }
       print(paste(x,i))
       x = x + 500
@@ -62,6 +62,15 @@ acs500tract <- function(){
   }
   acstab <- acstab[, !duplicated(colnames(acstab))]
   return(acstab)
+}
+
+for (st in stateshort){
+  nam <- paste0("tract",st)
+  print(nam)
+  assign(nam, acs500tract(st))
+  write.csv(paste0("tract",st), file = paste0(nam,".csv"))
+  #print(paste0("Clearing ",nam))
+  #assign(nam,"")
 }
 
 acs500bg <- function(geotype){
