@@ -64,13 +64,14 @@ acs500tract <- function(tract_state){
   return(acstab)
 }
 
+#stateshort is for a partial list, change to state_codes for all states
 for (st in stateshort){
   nam <- paste0("tract",st)
   print(nam)
   assign(nam, acs500tract(st))
-  write.csv(paste0("tract",st), file = paste0(nam,".csv"))
-  #print(paste0("Clearing ",nam))
-  #assign(nam,"")
+  write.csv(get(nam), file = paste0(nam,".csv"))
+  print(paste0("Clearing ",nam))
+  assign(nam,NULL)
 }
 
 acs500bg <- function(geotype){
