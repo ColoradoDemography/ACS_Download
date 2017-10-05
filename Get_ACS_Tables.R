@@ -74,31 +74,39 @@ for (st in stateshort){
   assign(nam,NULL)
 }
 
-acs500bg <- function(geotype){
-  for (state in state_codes){
+acs500bg <- function(bg_state){
     x = 1
     for (i in 1:length(tablevector)){
       if ((i %% 500) == 0 | i == length(tablevector)){
         tv500 = tablevector[x:i]
         if (x == 1){
-          acstab <- get_acs(geography = geotype, state = state, variables = tv500, endyear = 2010, output = "wide")
+          acstab <- get_acs(geography = "block group", variables = tv500, state = bg_state, county = cnty_list$COUNTYFP, endyear = 2010, output = "wide")
         }
         else{
-          acstab <- cbind(acstab, get_acs(geography = geotype, state = state, variables = tv500, endyear = 2010, output = "wide"))
+          acstab <- cbind(acstab, get_acs(geography = "block group", variables = tv500, state = bg_state, county = cnty_list$COUNTYFP, endyear = 2010, output = "wide"))
         }
         print(paste(x,i))
         x = x + 500
       }
     }
-    acstab <- acstab[, !duplicated(colnames(acstab))]
-    if (state == "AL"){
-      acstabbg <- acstab
-    }
-    else{
-      acstabbg <- cbind(acstabbg,acstab)
-    }
-  }
-  return(acstabbg)
+    # acstab <- acstab[, !duplicated(colnames(acstab))]
+    # if (state == "AL"){
+    #   acstabbg <- acstab
+    # }
+    # else{
+    #   acstabbg <- cbind(acstabbg,acstab)
+  #}
+  return(acstab)
+}
+
+for (st in stateshort){
+  cnty_list = ctys[ctys$STATEFP == st,]
+  nam <- paste0("bg",st)
+  print(nam)
+  assign(nam, acs500bg(st))
+  write.csv(get(nam), file = paste0(nam,".csv"))
+  print(paste0("Clearing ",nam))
+  assign(nam,NULL)
 }
 
 acstabus <- acs500(geotype = "us")
@@ -110,7 +118,7 @@ acstabtract <- acs500tract(geotype = "tract")
 for (state in state_codes){
   print(state)
   cnty_list = ctys[ctys$STATEFP == state,]
-  acstab <- rbind(acstab, get_acs(geography = "block group", variables = "B00001_001", state = state, county = cnty_list$COUNTYFP, output = "wide"))
+  acstab <- get_acs(geography = "block group", variables = "B00001_001", state = state, county = cnty_list$COUNTYFP, output = "wide")
 }
 
 for (tv in tablevector){
@@ -180,4 +188,9 @@ for (column in testcolumns){
       collist <- c(collist,column)
     }
   }
+}
+
+for (var in tv500){
+  print(var) 
+  get_acs(geography = "block group", variables = var, state = "08", county = "035")
 }
