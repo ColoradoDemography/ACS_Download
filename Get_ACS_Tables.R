@@ -194,3 +194,24 @@ for (var in tv500){
   print(var) 
   get_acs(geography = "block group", variables = var, state = "08", county = "035")
 }
+
+x = 0
+for (tv in tablevector){
+  checkvector(tv)
+}
+  
+checkvector <- function(tv){
+  bgvector = c()
+  nullvector = c()
+  out <- tryCatch({message(paste("Trying",tv))
+           get_acs(geography = "block group", variables = tv, state = "08", county = "035")
+           bgvector = c(bgvector,tv)
+  },
+  error=function(cond){
+  #message(paste(tv,"doesn't exist for bgs"))
+message(cond)
+    nullvector = c(nullvector,tv)
+  })
+  return(bgvector)
+  #return(nullvector)
+}
