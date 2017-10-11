@@ -74,21 +74,46 @@ for (st in stateshort){
   assign(nam,NULL)
 }
 
+#Get Block Group Data
+
+#extract fields that have block group values
+bgvector = c()
+nullvector = c()
+for (tv in tablevector){
+  tryCatch({message(paste("Trying",tv))
+    get_acs(geography = "block group", variables = tv, state = "08", county = "035")
+    bgvector = c(bgvector,tv)
+  },
+  error=function(cond){
+    #message(paste(tv,"doesn't exist for bgs"))
+    message(cond)
+    nullvector = c(nullvector,tv)
+  })
+}
+
+#convert bgvector.txt (stored result of above) into a vector
+bgcolumns = read.delim("bgvector.txt",header = FALSE,sep = "\n")
+bgvector = as.vector(bgcolumns$V1)
+
 acs500bg <- function(bg_state){
-    x = 1
-    for (i in 1:length(tablevector)){
-      if ((i %% 500) == 0 | i == length(tablevector)){
-        tv500 = tablevector[x:i]
-        if (x == 1){
-          acstab <- get_acs(geography = "block group", variables = tv500, state = bg_state, county = cnty_list$COUNTYFP, endyear = 2010, output = "wide")
+    y = 1
+    cnty_list = ctys[ctys$STATEFP == bg_state,]
+    for (bg_county in cnty_list$COUNTYFP){
+      x = 1
+      print(paste("Running",bg_county,"in",bg_state))
+      for (i in 1:length(bgvector)){
+        if ((i %% 500) == 0 | i == length(bgvector)){
+          tv500 = bgvector[x:i]
+          if (x == 1 & y == 1){
+            acstab <- get_acs(geography = "block group", state = bg_state, county = bg_county, variables = tv500, endyear = 2010, output = "wide")
+          }
+          else{
+            acstab <- cbind(acstab, get_acs(geography = "block group", state = bg_state, county = bg_county, variables = tv500, endyear = 2010, output = "wide"))
+          }
+          print(paste(x,i))
+          x = x + 500
         }
-        else{
-          acstab <- cbind(acstab, get_acs(geography = "block group", variables = tv500, state = bg_state, county = cnty_list$COUNTYFP, endyear = 2010, output = "wide"))
-        }
-        print(paste(x,i))
-        x = x + 500
       }
-    }
     # acstab <- acstab[, !duplicated(colnames(acstab))]
     # if (state == "AL"){
     #   acstabbg <- acstab
@@ -96,14 +121,17 @@ acs500bg <- function(bg_state){
     # else{
     #   acstabbg <- cbind(acstabbg,acstab)
   #}
+    y = y + 1
+    print(y)
+  }
   return(acstab)
 }
 
-for (st in stateshort){
-  cnty_list = ctys[ctys$STATEFP == st,]
-  nam <- paste0("bg",st)
+for (bg_state in stateshort){
+  #cnty_list = ctys[ctys$STATEFP == bg_state,]
+  nam <- paste0("bg",bg_state)
   print(nam)
-  assign(nam, acs500bg(st))
+  assign(nam, acs500bg(bg_state))
   write.csv(get(nam), file = paste0(nam,".csv"))
   print(paste0("Clearing ",nam))
   assign(nam,NULL)
@@ -121,11 +149,15 @@ for (state in state_codes){
   acstab <- get_acs(geography = "block group", variables = "B00001_001", state = state, county = cnty_list$COUNTYFP, output = "wide")
 }
 
-for (tv in tablevector){
-  tryCatch({  
-    get_acs(geography = "us", variables = tv, endyear = 2010, output = "wide")
-  }, error=function(e){cat("ERROR :",conditionMessage(e),tv,"\n")})
+
+for (county in cnty_list$COUNTYFP){
+  print(county)
+  acstab <- get_acs(geography = "block group", variables = bgvector, state = bg_state, county = county, endyear = 2010, output = "wide")
 }
+
+
+
+
 
 #Table Manipulation
 
@@ -190,28 +222,4 @@ for (column in testcolumns){
   }
 }
 
-for (var in tv500){
-  print(var) 
-  get_acs(geography = "block group", variables = var, state = "08", county = "035")
-}
 
-x = 0
-for (tv in tablevector){
-  checkvector(tv)
-}
-  
-checkvector <- function(tv){
-  bgvector = c()
-  nullvector = c()
-  out <- tryCatch({message(paste("Trying",tv))
-           get_acs(geography = "block group", variables = tv, state = "08", county = "035")
-           bgvector = c(bgvector,tv)
-  },
-  error=function(cond){
-  #message(paste(tv,"doesn't exist for bgs"))
-message(cond)
-    nullvector = c(nullvector,tv)
-  })
-  return(bgvector)
-  #return(nullvector)
-}
