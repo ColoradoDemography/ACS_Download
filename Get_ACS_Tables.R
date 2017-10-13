@@ -74,7 +74,7 @@ for (st in stateshort){
   assign(nam,NULL)
 }
 
-#Get Block Group Data
+#Get Block Group Data - Not working well for 2010, will try again for 2016
 
 #extract fields that have block group values
 bgvector = c()
@@ -96,19 +96,19 @@ bgcolumns = read.delim("bgvector.txt",header = FALSE,sep = "\n")
 bgvector = as.vector(bgcolumns$V1)
 
 acs500bg <- function(bg_state){
-    y = 1
+    bgtab = NULL
     cnty_list = ctys[ctys$STATEFP == bg_state,]
-    for (bg_county in cnty_list$COUNTYFP){
+    #for (bg_county in cnty_list$COUNTYFP){
       x = 1
-      print(paste("Running",bg_county,"in",bg_state))
+      #print(paste("Running",bg_county,"in",bg_state))
       for (i in 1:length(bgvector)){
         if ((i %% 500) == 0 | i == length(bgvector)){
           tv500 = bgvector[x:i]
-          if (x == 1 & y == 1){
-            acstab <- get_acs(geography = "block group", state = bg_state, county = bg_county, variables = tv500, endyear = 2010, output = "wide")
+          if (x == 1){
+            acstab <- get_acs(geography = "block group", state = bg_state, county = cnty_list$COUNTYFP, variables = tv500, endyear = 2015, output = "wide")
           }
           else{
-            acstab <- cbind(acstab, get_acs(geography = "block group", state = bg_state, county = bg_county, variables = tv500, endyear = 2010, output = "wide"))
+            acstab <- cbind(acstab, get_acs(geography = "block group", state = bg_state, county = cnty_list$COUNTYFP, variables = tv500, endyear = 2015, output = "wide"))
           }
           print(paste(x,i))
           x = x + 500
@@ -121,9 +121,8 @@ acs500bg <- function(bg_state){
     # else{
     #   acstabbg <- cbind(acstabbg,acstab)
   #}
-    y = y + 1
-    print(y)
-  }
+    #bgtab = rbind(bgtab,acstab)
+  #}
   return(acstab)
 }
 
