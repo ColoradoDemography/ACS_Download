@@ -141,7 +141,7 @@ for (bg_state in stateshort){
 
 
 #Table Manipulation
-
+getdata <- function(file)
 states <- read.csv(file="states.csv", header=TRUE, sep=",", colClasses = "character")
 
 #Split data and margin of error
@@ -215,6 +215,7 @@ for (column in testcolumns){
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
         dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist)))
+        #dbtable <- as.data.frame(sapply(dbtable, as.numeric)) Only necessary when as.numeric above fails 
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',temptable),dbtable,row.names=FALSE)
         sql <- paste0("INSERT INTO data.", tolower(tabname)," SELECT * FROM data.", temptable,";" )
@@ -230,4 +231,79 @@ for (column in testcolumns){
       collist <- c(collist,column)
     }
   }
+}
+
+#function for looping
+getdata <- function(file,type){
+  states <- read.csv(file=file, header=TRUE, sep=",", colClasses = "character")
+
+  #Split data and margin of error
+  statedata <- select_(states, lazyeval::interp(~ends_with(x), x = "E"))
+  statedata$NAM <- NULL
+  statemoe <- select_(states, lazyeval::interp(~ends_with(x), x = "M"))
+  
+  #Rename fields
+  names(statedata) <- substr(names(statedata),1,nchar(names(statedata))-1)
+  names(statedata) <- sub("_","",names(statedata))
+  names(statemoe) <- substr(names(statemoe),1,nchar(names(statemoe))-1)
+  names(statemoe) <- sub("_","_MOE",names(statemoe))
+  
+  #Add name and geoid columns
+  statedata <-cbind(GEONUM=as.character(states$GEOID),statedata)
+  statedata <-cbind(NAME=states$NAME,statedata)
+  statemoe <-cbind(GEONUM=as.character(states$GEOID),statemoe)
+  statemoe <-cbind(NAME=states$NAME,statemoe)
+  
+  #Change geoid to geonum
+  statedata$GEONUM <- sub("^","1",statedata$GEONUM)
+  statemoe$GEONUM <- sub("^","1",statemoe$GEONUM)
+  
+  
+  #make all columns numeric
+  statedata <- sapply(statedata, as.numeric) #drop Name and Nam in production
+  statemoe <- sapply(statemoe, as.numeric)
+  
+  ifelse(type == "data", return(statedata),return(statemoe))
+
+}
+
+#Connect to Postgresql
+pg = dbDriver("PostgreSQL")
+con = dbConnect(pg, user="postgres", password="eA_987_Tr", host="104.197.26.248", port=5433, dbname="acs0610")
+
+#loop for tract files
+for (tractfile in temp){ 
+  print(paste0(tractfile), "has begun")
+  getdata(tractfile,"data") #change data to moe for the margins of error
+  testcolumns <- colnames(statedata) #Run twice, change statedata to statemoe
+  temptable <- "temptable"
+  tabname <- ""
+  collist <- c()
+
+  for (column in testcolumns){
+    if (column == "NAME" | column == "GEONUM" | column == "NAM"){}
+    else{
+      colstart <- substr(column, start = 1, stop = nchar(column)-3)
+      #print(colstart)
+      if (colstart != tabname){
+        if (is.null(collist) == FALSE){
+          dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist)))
+          #dbtable <- as.data.frame(sapply(dbtable, as.numeric)) Only necessary when as.numeric above fails 
+          names(dbtable) <- tolower(names(dbtable))
+          dbWriteTable(con,c('data',temptable),dbtable,row.names=FALSE)
+          sql <- paste0("INSERT INTO data.", tolower(tabname)," SELECT * FROM data.", temptable,";" )
+          dbSendQuery(con, sql)
+          dropsql <- paste0("DROP TABLE data.", temptable)
+          dbSendQuery(con,dropsql)
+        }
+        #print(collist)
+        collist <- c(column)
+        tabname <- colstart
+      }
+      else {
+        collist <- c(collist,column)
+      }
+    }
+  }
+  print(paste0(tractfile," is complete"))
 }
