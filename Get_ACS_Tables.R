@@ -175,7 +175,7 @@ statemoe <- sapply(statemoe, as.numeric)
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="eA_987_Tr", host="104.197.26.248", port=5433, dbname="acs0610")
+con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs0610")
 
 testcolumns <- colnames(statedata) #change to statemoe to load moe
 
@@ -270,11 +270,12 @@ getdata <- function(file,type){
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
 con = dbConnect(pg, user="postgres", password="eA_987_Tr", host="104.197.26.248", port=5433, dbname="acs0610")
+temp = list.files(pattern="*.csv")
 
 #loop for tract files
 for (tractfile in temp){ 
-  print(paste0(tractfile), "has begun")
-  getdata(tractfile,"data") #change data to moe for the margins of error
+  print(paste0(tractfile, " has begun"))
+  statedata = getdata(tractfile,"data") #change data to moe for the margins of error
   testcolumns <- colnames(statedata) #Run twice, change statedata to statemoe
   temptable <- "temptable"
   tabname <- ""
@@ -287,7 +288,7 @@ for (tractfile in temp){
       #print(colstart)
       if (colstart != tabname){
         if (is.null(collist) == FALSE){
-          dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist)))
+          dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #And change this to moe
           #dbtable <- as.data.frame(sapply(dbtable, as.numeric)) Only necessary when as.numeric above fails 
           names(dbtable) <- tolower(names(dbtable))
           dbWriteTable(con,c('data',temptable),dbtable,row.names=FALSE)
