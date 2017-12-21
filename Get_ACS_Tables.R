@@ -10,16 +10,16 @@ geos <- c("state","county","tract","bg","place")
 state_codes <- unique(fips_codes$state_code)[1:51]
 ctys <- counties(cb = TRUE)
 #states <- c("al", "ak", "az", "ar", "ca", "co", "ct", "de", "dc", "fl", "ga", "hi", "id", "il", "in", "ia", "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "pr", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy")
-vars2010 <- load_variables(2010, "acs5") #get the table names
-vars2010 <- vars2010[-c(1,2,3,4,5),] #remove extras at the top
-vars2010 <- vars2010[-c(41860:41893),] #remove extras at the bottom
-vars2010 <- vars2010[-c(39305),] #remove BLKGRP
-tablevector <- vars2010$name #create a vector of the table names
+vars2016 <- load_variables(2016, "acs5") #get the table names
+vars2016 <- vars2016[-c(1,2,3,4),] #remove extras at the top
+vars2016 <- vars2016[-c(22817:22851),] #remove extras at the bottom
+vars2016 <- vars2016[-c(21091),] #remove BLKGRP
+tablevector <- vars2016$name #create a vector of the table names
 tablevector <- sub("E$","",tablevector) #remove last Es
 tablevector <- sub("M$","",tablevector) #remove last Ms
 tablevector <- unique(tablevector) #ditch the duplicates
 
-# acstab <- get_acs(geography = "us", variables = c("B01001_001","B01001_002"), endyear = 2010, output = "wide")
+# acstab <- get_acs(geography = "us", variables = c("B01001_001","B01001_002"), year = 2016, output = "wide")
 # acstab <- rbind(acstab, get_acs(geography = "state", variables = "B00001_001", endyear = 2010, output = "wide"))
 # acstab <- rbind(acstab, get_acs(geography = "county", variables = "B00001_001", endyear = 2010, output = "wide"))
 # acstab <- rbind(acstab, get_acs(geography = "place", variables = "B00001_001", endyear = 2010, output = "wide"))
