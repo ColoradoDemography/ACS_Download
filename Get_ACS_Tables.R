@@ -1,3 +1,4 @@
+#devtools::install_github("ColoradoDemography/tidycensus")
 library(tidycensus)
 library(tidyverse)
 library(tigris)
@@ -19,7 +20,7 @@ tablevector <- sub("E$","",tablevector) #remove last Es
 tablevector <- sub("M$","",tablevector) #remove last Ms
 tablevector <- unique(tablevector) #ditch the duplicates
 
-# acstab <- get_acs(geography = "us", variables = c("B01001_001","B01001_002"), year = 2016, output = "wide")
+# acstab <- get_acs(geography = "us", variables = c("B00001_001","B00002_001"), year = 2016, output = "wide")
 # acstab <- rbind(acstab, get_acs(geography = "state", variables = "B00001_001", endyear = 2010, output = "wide"))
 # acstab <- rbind(acstab, get_acs(geography = "county", variables = "B00001_001", endyear = 2010, output = "wide"))
 # acstab <- rbind(acstab, get_acs(geography = "place", variables = "B00001_001", endyear = 2010, output = "wide"))
@@ -32,10 +33,10 @@ acs500 <- function(geotype){
     if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
       if (x == 1){
-        acstab <- get_acs(geography = geotype, variables = tv500, endyear = 2010, output = "wide")
+        acstab <- get_acs(geography = geotype, variables = tv500, year = 2016, output = "wide")
       }
       else{
-        acstab <- cbind(acstab, get_acs(geography = geotype, variables = tv500, endyear = 2010, output = "wide"))
+        acstab <- cbind(acstab, get_acs(geography = geotype, variables = tv500, year = 2016, output = "wide"))
       }
       print(paste(x,i))
       x = x + 500
@@ -51,16 +52,17 @@ acs500tract <- function(tract_state){
     if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
       if (x == 1){
-        acstab <- get_acs(geography = "tract", state = tract_state, variables = tv500, endyear = 2010, output = "wide")
+        acstab <- get_acs(geography = "tract", state = tract_state, variables = tv500, year = 2016, output = "wide")
       }
       else{
-        acstab <- cbind(acstab, get_acs(geography = "tract", state = tract_state, variables = tv500, endyear = 2010, output = "wide"))
+        acstab <- cbind(acstab, get_acs(geography = "tract", state = tract_state, variables = tv500, year = 2016, output = "wide"))
       }
       print(paste(x,i))
       x = x + 500
     }
   }
   acstab <- acstab[, !duplicated(colnames(acstab))]
+  acstab <- acstab[, order(names(acstab))]
   return(acstab)
 }
 
@@ -175,9 +177,9 @@ statemoe <- sapply(statemoe, as.numeric)
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs0610")
+con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs1216")
 
-testcolumns <- colnames(statedata) #change to statemoe to load moe
+testcolumns <- colnames(statemoe) #change to statemoe to load moe
 
 #do the loop and write tables with states data to database
 tabname <- ""
@@ -189,7 +191,7 @@ for (column in testcolumns){
     #print(colstart)
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
-        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #change to statemoe to load moe
+        dbtable <- as.data.frame(subset(statemoe,select=c("GEONUM",collist))) #change to statemoe to load moe
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',tolower(tabname)),dbtable,row.names=FALSE)
       }
@@ -214,7 +216,7 @@ for (column in testcolumns){
     #print(colstart)
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
-        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist)))
+        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #change to moe if necessary
         #dbtable <- as.data.frame(sapply(dbtable, as.numeric)) Only necessary when as.numeric above fails 
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',temptable),dbtable,row.names=FALSE)
@@ -269,7 +271,7 @@ getdata <- function(file,type){
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="eA_987_Tr", host="104.197.26.248", port=5433, dbname="acs0610")
+con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs0610")
 temp = list.files(pattern="*.csv")
 
 #loop for tract files
