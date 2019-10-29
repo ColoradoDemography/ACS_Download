@@ -37,14 +37,13 @@ acs500 <- function(geotype){
   for (i in 1:length(tablevector)){
     if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
-      print(tv500)
       if (x == 1){
         acstab <- get_acs(geography = geotype, variables = tv500, year = 2017, output = "wide")
       }
       else{
         acstab <- cbind(acstab, get_acs(geography = geotype, variables = tv500, year = 2017, output = "wide"))
       }
-      #print(paste(x,i))
+      print(paste(x,i))
       x = x + 500
     }
   }
@@ -187,9 +186,9 @@ statemoe <- sapply(statemoe, as.numeric)
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs0711")
+con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs1317")
 
-testcolumns <- colnames(statemoe) #change to statemoe to load moe
+testcolumns <- colnames(statedata) #change to statemoe to load moe
 
 #do the loop and write tables with states data to database
 tabname <- ""
@@ -201,7 +200,7 @@ for (column in testcolumns){
     #print(colstart)
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
-        dbtable <- as.data.frame(subset(statemoe,select=c("GEONUM",collist))) #change to statemoe to load moe
+        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #change to statemoe to load moe
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',tolower(tabname)),dbtable,row.names=FALSE)
       }
@@ -216,7 +215,8 @@ for (column in testcolumns){
 }
 
 #append to already written tables
-testcolumns <- colnames(statedata) #change to statemoe to load moe
+#to add individual tables, run the script below, then run the script within the innermost if again
+testcolumns <- colnames(statemoe) #change to statemoe to load moe
 temptable <- "temptable"
 tabname <- ""
 collist <- c()
@@ -224,10 +224,10 @@ for (column in testcolumns){
   if (column == "NAME" | column == "GEONUM" | column == "NAM"){}
   else{
     colstart <- substr(column, start = 1, stop = nchar(column)-3)
-    #print(colstart)
+    print(colstart)
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
-        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #change to moe if necessary
+        dbtable <- as.data.frame(subset(statemoe,select=c("GEONUM",collist))) #change to moe if necessary
         #dbtable <- as.data.frame(sapply(dbtable, as.numeric)) Only necessary when as.numeric above fails 
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',temptable),dbtable,row.names=FALSE)
@@ -236,7 +236,7 @@ for (column in testcolumns){
         dropsql <- paste0("DROP TABLE data.", temptable)
         dbSendQuery(con,dropsql)
       }
-      #print(collist)
+      print(collist)
       collist <- c(column)
       tabname <- colstart
     }
@@ -429,3 +429,8 @@ for (cnty in counties){
   assign(nam,NULL)
 }
 
+for (st in state_codes){
+  temptab <- get_acs(geography = "block group", state = st, variable = "B19013_001", year = 2017, output = "wide")
+  acstab <- rbind(acstab, temptab)
+  print(paste0("State ",st))
+}
