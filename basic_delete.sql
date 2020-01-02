@@ -1,0 +1,2 @@
+﻿DELETE FROM data.b24082
+WHERE geonum > 10000000 and geonum < 99999999

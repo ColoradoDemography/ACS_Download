@@ -12,6 +12,7 @@ state_codes <- unique(fips_codes$state_code)[1:51]
 #ctys <- counties(cb = TRUE)
 #states <- c("al", "ak", "az", "ar", "ca", "co", "ct", "de", "dc", "fl", "ga", "hi", "id", "il", "in", "ia", "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "pr", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy")
 vars2017 <- load_variables(2017, "acs5") #get the table names
+#vars2018 <- load_variables(2018, "acs5")
 #trim unwanted table names, positions vary year to year
 # vars2011 <- vars2011[-c(42079:42101),] #remove extras at the bottom
 # vars2011 <- vars2011[-c(39732),] #remove BLKGRP
@@ -19,7 +20,8 @@ vars2017 <- load_variables(2017, "acs5") #get the table names
 vars2017 <- vars2017[-c(1,2,3,4),] #remove extras at the top
 vars2017 <- vars2017[-c(25072:25106),] #remove extras at the bottom
 vars2017 <- vars2017[-c(23349),] #remove BLKGRP
-tablevector <- vars2017$name #create a vector of the table names
+#vars2018 <- vars2018[-c(24829:25274),]
+tablevector <- vars2018$name #create a vector of the table names
 tablevector <- sub("E$","",tablevector) #remove last Es
 tablevector <- sub("M$","",tablevector) #remove last Ms
 tablevector <- unique(tablevector) #ditch the duplicates
@@ -38,10 +40,10 @@ acs500 <- function(geotype){
     if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
       if (x == 1){
-        acstab <- get_acs(geography = geotype, variables = tv500, year = 2017, output = "wide")
+        acstab <- get_acs(geography = geotype, variables = tv500, year = 2018, output = "wide")
       }
       else{
-        acstab <- cbind(acstab, get_acs(geography = geotype, variables = tv500, year = 2017, output = "wide"))
+        acstab <- cbind(acstab, get_acs(geography = geotype, variables = tv500, year = 2018, output = "wide"))
       }
       print(paste(x,i))
       x = x + 500
@@ -154,6 +156,7 @@ acs500bg <- function(bg_county){
 #states <- read.csv(file="states.csv", header=TRUE, sep=",", colClasses = "character")
 #states <- rbind(acstabus, acstabstate) #cbind the results of acs500("us") and acs500("states")
 
+#When appending, use states <- acs500()
 states <- states[, order(names(states))]
 #Split data and margin of error
 statedata <- select_(states, lazyeval::interp(~ends_with(x), x = "E"))
@@ -186,9 +189,9 @@ statemoe <- sapply(statemoe, as.numeric)
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="password", host="104.197.26.248", port=5433, dbname="acs1317")
+con = dbConnect(pg, user="postgres", password="", host="104.197.26.248", port=5433, dbname="acs1418")
 
-testcolumns <- colnames(statedata) #change to statemoe to load moe
+testcolumns <- colnames(statemoe) #change to statemoe to load moe
 
 #do the loop and write tables with states data to database
 tabname <- ""
@@ -200,7 +203,7 @@ for (column in testcolumns){
     #print(colstart)
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
-        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #change to statemoe to load moe
+        dbtable <- as.data.frame(subset(statemoe,select=c("GEONUM",collist))) #change to statemoe to load moe
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',tolower(tabname)),dbtable,row.names=FALSE)
       }
@@ -216,7 +219,7 @@ for (column in testcolumns){
 
 #append to already written tables
 #to add individual tables, run the script below, then run the script within the innermost if again
-testcolumns <- colnames(statemoe) #change to statemoe to load moe
+testcolumns <- colnames(statedata) #change to statemoe to load moe
 temptable <- "temptable"
 tabname <- ""
 collist <- c()
@@ -227,7 +230,7 @@ for (column in testcolumns){
     print(colstart)
     if (colstart != tabname){
       if (is.null(collist) == FALSE){
-        dbtable <- as.data.frame(subset(statemoe,select=c("GEONUM",collist))) #change to moe if necessary
+        dbtable <- as.data.frame(subset(statedata,select=c("GEONUM",collist))) #change to moe if necessary
         #dbtable <- as.data.frame(sapply(dbtable, as.numeric)) Only necessary when as.numeric above fails 
         names(dbtable) <- tolower(names(dbtable))
         dbWriteTable(con,c('data',temptable),dbtable,row.names=FALSE)
