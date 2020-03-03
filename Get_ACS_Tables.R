@@ -11,16 +11,16 @@ geos <- c("state","county","tract","bg","place")
 state_codes <- unique(fips_codes$state_code)[1:51]
 #ctys <- counties(cb = TRUE)
 #states <- c("al", "ak", "az", "ar", "ca", "co", "ct", "de", "dc", "fl", "ga", "hi", "id", "il", "in", "ia", "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok", "or", "pa", "pr", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv", "wi", "wy")
-vars2017 <- load_variables(2017, "acs5") #get the table names
-#vars2018 <- load_variables(2018, "acs5")
+#vars2017 <- load_variables(2017, "acs5") #get the table names
+vars2018 <- load_variables(2018, "acs5")
 #trim unwanted table names, positions vary year to year
 # vars2011 <- vars2011[-c(42079:42101),] #remove extras at the bottom
 # vars2011 <- vars2011[-c(39732),] #remove BLKGRP
 # vars2011 <- vars2011[-c(1),] #remove extras at the top
-vars2017 <- vars2017[-c(1,2,3,4),] #remove extras at the top
-vars2017 <- vars2017[-c(25072:25106),] #remove extras at the bottom
-vars2017 <- vars2017[-c(23349),] #remove BLKGRP
-#vars2018 <- vars2018[-c(24829:25274),]
+#vars2017 <- vars2017[-c(1,2,3,4),] #remove extras at the top
+#vars2017 <- vars2017[-c(25072:25106),] #remove extras at the bottom
+#vars2017 <- vars2017[-c(23349),] #remove BLKGRP
+vars2018 <- vars2018[-c(24829:25274),]
 tablevector <- vars2018$name #create a vector of the table names
 tablevector <- sub("E$","",tablevector) #remove last Es
 tablevector <- sub("M$","",tablevector) #remove last Ms
@@ -59,10 +59,10 @@ acs500tract <- function(tract_state){
     if ((i %% 500) == 0 | i == length(tablevector)){
       tv500 = tablevector[x:i]
       if (x == 1){
-        acstab <- get_acs(geography = "tract", state = tract_state, variables = tv500, year = 2011, output = "wide")
+        acstab <- get_acs(geography = "tract", state = tract_state, variables = tv500, year = 2018, output = "wide")
       } #change geography to tract or block group depending
       else{
-        acstab <- cbind(acstab, get_acs(geography = "tract", state = tract_state, variables = tv500, year = 2011, output = "wide"))
+        acstab <- cbind(acstab, get_acs(geography = "tract", state = tract_state, variables = tv500, year = 2018, output = "wide"))
       } #change geography to tract or block group depending
       print(paste(x,i))
       x = x + 500
@@ -90,7 +90,7 @@ bgvector = c()
 nullvector = c()
 for (tv in tablevector){
   tryCatch({message(paste("Trying",tv))
-    get_acs(geography = "block group", variables = tv, state = "08", county = "035")
+    get_acs(geography = "block group", variables = tv, state = "08", county = "035", year = "2018")
     bgvector = c(bgvector,tv)
   },
   error=function(cond){
@@ -189,7 +189,7 @@ statemoe <- sapply(statemoe, as.numeric)
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="", host="104.197.26.248", port=5433, dbname="acs1418")
+con = dbConnect(pg, user="postgres", password="egcdcatbhcab", host="104.197.26.248", port=5433, dbname="acs1418")
 
 testcolumns <- colnames(statemoe) #change to statemoe to load moe
 
@@ -253,6 +253,7 @@ for (column in testcolumns){
 getdata <- function(file,type){
   states <- read.csv(file=file, header=TRUE, sep=",", colClasses = "character")
 
+  states <- states[, order(names(states))]
   #Split data and margin of error
   statedata <- select_(states, lazyeval::interp(~ends_with(x), x = "E"))
   statedata$NAM <- NULL
@@ -285,7 +286,7 @@ getdata <- function(file,type){
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="", host="104.197.26.248", port=5433, dbname="acs0711")
+con = dbConnect(pg, user="postgres", password="egcdcatbhcab", host="104.197.26.248", port=5433, dbname="acs1418")
 temp = list.files(pattern="*.csv")
 
 #loop for tract files
@@ -436,4 +437,10 @@ for (st in state_codes){
   temptab <- get_acs(geography = "block group", state = st, variable = "B19013_001", year = 2017, output = "wide")
   acstab <- rbind(acstab, temptab)
   print(paste0("State ",st))
+}
+
+#run all tracts...run first county then the rest
+for (st in state_codes2){
+  tract_data <- acs500tract(st)
+  states <- rbind(states, tract_data)
 }
