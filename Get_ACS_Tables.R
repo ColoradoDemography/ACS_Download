@@ -286,7 +286,7 @@ getdata <- function(file,type){
 
 #Connect to Postgresql
 pg = dbDriver("PostgreSQL")
-con = dbConnect(pg, user="postgres", password="egcdcatbhcab", host="104.197.26.248", port=5433, dbname="acs1418")
+con = dbConnect(pg, user="postgres", password="", host="104.197.26.248", port=5433, dbname="acs1418")
 temp = list.files(pattern="*.csv")
 
 #loop for tract files
